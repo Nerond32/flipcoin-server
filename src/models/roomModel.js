@@ -5,7 +5,7 @@ const { Schema } = mongoose;
 const roomModel = new Schema({
   name: String,
   creationDate: Date,
-  users: [String],
+  users: [{ name: String, confirmed: Boolean }],
   messages: [{ source: String, content: String }]
 });
 

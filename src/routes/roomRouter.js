@@ -14,24 +14,24 @@ const routes = Room => {
     })
     .post((req, res) => {
       const room = new Room();
-      room.name = req.body.name;
-      room.users.push(req.body.username);
+      room.name = req.body.roomName;
+      room.users.push({ name: req.body.username, confirmed: false });
       room.messages.push({
         source: 'Room',
         content: `${req.body.username} entered the room`
       });
       room.creationDate = Date.now();
       room.save();
-      return res.status(201).json(room);
+      return res.sendStatus(201);
     });
   roomRouter.route('/rooms/:roomName').get((req, res) => {
     const query = {};
     query.name = req.params.roomName;
-    Room.find(query, (err, room) => {
+    Room.findOne({ name: query.name }, (err, room) => {
       if (err) {
         return res.send(err);
       }
-      if (!room.length) {
+      if (!room) {
         return res.sendStatus(404);
       }
       return res.json(room);
