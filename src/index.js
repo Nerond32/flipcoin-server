@@ -5,11 +5,14 @@ const bodyParser = require('body-parser');
 
 mongoose.connect('mongodb://localhost/roomAPI');
 const app = express();
+const expressWs = require('express-ws')(app);
+
+const wsInstance = expressWs.getWss();
 const port = process.env.PORT || 7777;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 const Room = require('./models/roomModel');
-const roomRouter = require('./routes/roomRouter')(Room);
+const roomRouter = require('./routes/roomRouter')(Room, wsInstance);
 
 const allowedOrigins = ['http://localhost:3000'];
 app.use(
@@ -25,7 +28,6 @@ app.use(
     }
   })
 );
-
 app.use('/api', roomRouter);
 app.listen(port, () => {
   // eslint-disable-next-line no-console
