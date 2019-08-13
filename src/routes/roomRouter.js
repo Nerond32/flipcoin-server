@@ -14,22 +14,24 @@ const routes = (Room, wsInstance) => {
       });
     })
     .post((req, res) => {
+      const { username, roomName } = req.body;
       const hostToken = generateToken();
       const room = new Room();
+      room.hostName = username;
       room.hostToken = hostToken;
-      room.name = req.body.roomName;
+      room.name = roomName;
       room.users.push({
         token: hostToken,
-        name: req.body.username,
+        name: username,
         confirmed: false
       });
       room.messages.push({
         source: 'Room',
-        content: `${req.body.username} entered the room`
+        content: `${username} entered the room`
       });
       room.creationDate = Date.now();
       room.save();
-      const response = { token: hostToken };
+      const response = { username, token: hostToken };
       return res.status(201).json(response);
     });
   roomRouter.route('/rooms/:roomName').post((req, res) => {
@@ -50,24 +52,32 @@ const routes = (Room, wsInstance) => {
       if (existingUser) {
         userToken = token;
       } else {
+        if (!username) {
+          return res.sendStatus(403);
+        }
         userToken = generateToken();
         const newUser = { token: userToken, name: username, confirmed: false };
         room.users.push(newUser);
         room.save();
+        room.messages.push({
+          source: 'Room',
+          content: `${username} entered the room`
+        });
       }
       const response = {
+        hostName: room.hostName,
         token: userToken,
-        roomName: room.name,
+        name: room.name,
         messages: room.messages,
-        users: room.users
+        users: room.users,
+        username: username || existingUser.name
       };
       return res.json(response);
     });
   });
   roomRouter.ws('/rooms/:roomName/chat', (ws, req) => {
-    console.log('aaa');
-    console.log(req.cookies);
     ws.on('message', msg => {
+      console.log('bbb');
       const parsedMsg = JSON.parse(msg);
       Room.findOne({ name: parsedMsg.roomName }, (err, room) => {
         const newMessage = {

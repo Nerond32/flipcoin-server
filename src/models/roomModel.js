@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const roomModel = new Schema({
+  hostName: String,
   hostToken: String,
   name: String,
   creationDate: Date,
