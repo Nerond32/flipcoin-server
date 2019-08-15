@@ -3,12 +3,13 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const roomModel = new Schema({
-  hostName: String,
-  hostToken: String,
-  name: String,
   creationDate: Date,
-  users: [{ token: String, name: String, confirmed: Boolean }],
-  messages: [{ source: String, content: String }]
+  roomName: String,
+  host: { hostToken: String, hostName: String },
+  messages: [
+    { msgId: String, msgType: String, msgAuthor: String, msgContent: String }
+  ],
+  users: [{ userToken: String, userName: String, userConfirmed: Boolean }]
 });
 
 module.exports = mongoose.model('Room', roomModel);

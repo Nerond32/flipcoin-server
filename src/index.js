@@ -3,7 +3,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
-mongoose.connect('mongodb://localhost/roomAPI');
+mongoose.connect('mongodb://localhost/roomAPI', { useNewUrlParser: true });
 const app = express();
 const expressWs = require('express-ws')(app);
 
