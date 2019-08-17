@@ -1,35 +1,13 @@
-const express = require('express');
-const cors = require('cors');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
+const app = require('./utils/initExpressApp');
+const server = require('http').createServer(app);
+const io = require('socket.io')(server);
+require('./routes/socketRouter')(io);
 
 mongoose.connect('mongodb://localhost/roomAPI', { useNewUrlParser: true });
-const app = express();
-const expressWs = require('express-ws')(app);
 
-const wsInstance = expressWs.getWss();
 const port = process.env.PORT || 7777;
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-const Room = require('./models/roomModel');
-const roomRouter = require('./routes/roomRouter')(Room, wsInstance);
-
-const allowedOrigins = ['http://localhost:3000'];
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg =
-          'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    }
-  })
-);
-app.use('/api', roomRouter);
-app.listen(port, () => {
+server.listen(port, () => {
   // eslint-disable-next-line no-console
   console.log(`Server started on port ${port}`);
 });
