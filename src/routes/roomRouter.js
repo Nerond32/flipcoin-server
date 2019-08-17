@@ -18,13 +18,15 @@ const routes = Room => {
       const { userName, roomName } = req.body;
       const newRoom = new Room();
       const hostToken = generateToken();
+      const userId = generateToken();
       newRoom.host = {
         hostToken,
-        hostName: userName
+        hostId: userId
       };
       newRoom.roomName = roomName;
       newRoom.users.push({
         userToken: hostToken,
+        userId,
         userName,
         userConfirmed: false
       });
@@ -33,7 +35,7 @@ const routes = Room => {
         msgTimeStamp: Date.now(),
         msgType: messageTypes.SPECIAL,
         msgAuthor: '',
-        msgContent: `Room ${roomName} has been created`
+        msgContent: `Room ${roomName} has been created by ${userName}`
       });
       newRoom.save();
       const response = { userToken: hostToken };

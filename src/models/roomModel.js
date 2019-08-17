@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const roomModel = new Schema({
   roomName: String,
-  host: { hostToken: String, hostName: String },
+  host: { hostToken: String, hostId: String },
   messages: [
     {
       msgId: String,
@@ -14,7 +14,14 @@ const roomModel = new Schema({
       msgContent: String
     }
   ],
-  users: [{ userToken: String, userName: String, userConfirmed: Boolean }]
+  users: [
+    {
+      userId: String,
+      userToken: String,
+      userName: String,
+      userConfirmed: Boolean
+    }
+  ]
 });
 
 module.exports = mongoose.model('Room', roomModel);

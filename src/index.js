@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const app = require('./utils/initExpressApp');
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
-require('./routes/socketRouter')(io);
+const Room = require('./models/roomModel');
+require('./routes/socketRouter')(io, Room);
 
 mongoose.connect('mongodb://localhost/roomAPI', { useNewUrlParser: true });
 
