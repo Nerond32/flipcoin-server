@@ -64,7 +64,7 @@ const routes = (Room, wsInstance) => {
         room.users.push(newUser);
         room.save();
       } else if (existingUser.userToken !== userToken) {
-        return res.sendStatus(403);
+        return res.sendStatus(409);
       }
       const { host, messages, users } = room;
       const response = {
@@ -106,14 +106,18 @@ const routes = (Room, wsInstance) => {
     });
     ws.on('message', msg => {
       const parsedMsg = JSON.parse(msg);
-      Room.findOne({ name: parsedMsg.roomName }, (err, room) => {
-        const newMessage = {
-          msgId: generateToken(),
-          msgType: messageTypes.MESSAGE,
-          msgAuthor: parsedMsg.sender,
-          msgContent: parsedMsg.message
-        };
-        addAndSendMessage(newMessage, room);
+      Room.findOne({ roomName: parsedMsg.roomName }, (err, room) => {
+        if (err || !room) {
+          console.log('Room does not exist');
+        } else {
+          const newMessage = {
+            msgId: generateToken(),
+            msgType: messageTypes.MESSAGE,
+            msgAuthor: parsedMsg.sender,
+            msgContent: parsedMsg.message
+          };
+          addAndSendMessage(newMessage, room);
+        }
       });
     });
     ws.on('close', reason => {
