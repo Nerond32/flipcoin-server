@@ -29,6 +29,7 @@ const routes = Room => {
       newRoom.roomName = roomName;
       newRoom.users.push({
         userToken: hostToken,
+        userSessionId: '',
         userId,
         userName,
         userConfirmed: false

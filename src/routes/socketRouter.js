@@ -1,91 +1,133 @@
 const generateToken = require('../utils/generateToken');
 const messageTypes = require('../constants/messageTypes');
 
+const handleRoomFinding = (err, room, roomName) => {
+  let response = '';
+  if (err) {
+    response = {
+      error: `Failed to get room. Reason: ${err}`,
+      status: 404
+    };
+  } else if (!room) {
+    response = {
+      error: `Room ${roomName} does not exist`,
+      status: 404
+    };
+  }
+  return response;
+};
+
+const handleNotEnoughInfo = (userToken, userName) => {
+  let response = '';
+  if (!userToken && !userName) {
+    response = {
+      error: 'Cannot join room without username or remembered user token!',
+      status: 400
+    };
+  }
+  return response;
+};
+
+const handleUserConflicts = (room, userToken, userName) => {
+  let response = '';
+  let userWithToken;
+  let userWithName;
+  if (userToken) {
+    userWithToken = room.users.find(user => {
+      return user.userToken === userToken;
+    });
+  }
+  if (userName) {
+    userWithName = room.users.find(user => {
+      return user.userName === userName;
+    });
+  }
+  if (
+    userWithName &&
+    userWithToken &&
+    userWithName.userToken !== userWithToken.userToken
+  ) {
+    response = {
+      error: 'Mismatch between provided token and username!',
+      status: 409
+    };
+  } else if (userWithName && !userWithToken) {
+    response = {
+      error: `User ${userName} already exists!`,
+      status: 409
+    };
+  }
+  return response;
+};
+
+const sendMessageToRoom = (io, room, message) => {
+  io.to(room.roomName).emit('new message', JSON.stringify(message));
+};
+
 const socketRouter = (io, Room) => {
   io.on('connection', socket => {
-    let socketUserName;
     let socketRoomName;
+    let socketUserName;
     socket.on('request room', msg => {
       const { roomName, userToken, userName } = JSON.parse(msg);
       Room.findOne({ roomName }, (err, room) => {
-        let response;
-        if (err) {
-          response = {
-            error: `Failed to get room. Reason: ${err}`
-          };
-        } else if (!room) {
-          response = {
-            error: `Room ${roomName} does not exist`
-          };
-        } else if (!userToken && !userName) {
-          response = {
-            error: 'Cannot join room without username or remembered user token!'
-          };
-        } else {
-          let userWithToken;
-          let userWithName;
-          if (userToken) {
-            userWithToken = room.users.find(user => {
-              return user.userToken === userToken;
-            });
-          }
+        let response =
+          handleRoomFinding(err, room, roomName) ||
+          handleNotEnoughInfo(userToken, userName) ||
+          handleUserConflicts(room, userToken, userName);
+        if (!response) {
+          const returnedToken = userToken || generateToken();
+          const userWithToken = room.users.find(user => {
+            return user.userToken === userToken;
+          });
           if (!userWithToken) {
-            userWithName = room.users.find(user => {
-              return user.userName === userName;
-            });
-          }
-          if (userWithName) {
-            response = {
-              error: 'User with that username already exists!'
-            };
-          } else {
-            const returnedToken = userToken || generateToken();
-            socketUserName = userWithToken ? userWithToken.userName : userName;
-            socketRoomName = room.roomName;
-            if (!userWithToken) {
-              room.users.push({
-                userId: generateToken(),
-                userToken: returnedToken,
-                userName,
-                userConfirmed: false
-              });
-            }
-            const usersData = room.users.map(user => {
-              return {
-                userId: user.userId,
-                userName: user.userName,
-                userConfirmed: user.userConfirmed
-              };
-            });
-            const newMessage = {
-              msgId: generateToken(),
-              msgType: messageTypes.USER_JOINED,
-              msgTimestamp: Date.now(),
-              msgAuthor: '',
-              msgContent: `User ${socketUserName} joined the room`
-            };
-            room.messages.push(newMessage);
-            room.save();
-
-            const responseRoom = {
-              hostId: room.host.hostId,
-              messages: room.messages,
-              users: usersData
-            };
-            response = {
-              room: responseRoom,
+            room.users.push({
+              userId: generateToken(),
               userToken: returnedToken,
-              userName: socketUserName
-            };
+              userName,
+              userConfirmed: false
+            });
           }
+          const usersData = room.users.map(user => {
+            return {
+              userId: user.userId,
+              userName: user.userName,
+              userConfirmed: user.userConfirmed
+            };
+          });
+          const newMessage = {
+            msgId: generateToken(),
+            msgType: messageTypes.USER_JOINED,
+            msgTimestamp: Date.now(),
+            msgAuthor: '',
+            msgContent: `User ${userName} joined the room`
+          };
+          sendMessageToRoom(io, room, newMessage);
+          room.messages.push(newMessage);
+          socketRoomName = room.roomName;
+          socketUserName = userName;
+          room.save();
+          const responseRoom = {
+            hostId: room.host.hostId,
+            messages: room.messages,
+            users: usersData
+          };
+          response = {
+            room: responseRoom,
+            userToken: returnedToken,
+            userName
+          };
         }
         socket.emit('send room', JSON.stringify(response));
+        socket.join(room.roomName);
       });
     });
     socket.on('send message', msg => {
       const { roomName, userToken, message } = JSON.parse(msg);
+      console.log(userToken);
       let response;
       Room.findOne({ roomName }, (err, room) => {
+        console.log(room.users);
         if (err) {
           response = {
             error: `Failed to get room. Reason: ${err}`
@@ -112,27 +154,28 @@ const socketRouter = (io, Room) => {
             };
             room.messages.push(newMessage);
             room.save();
-            response = { message: newMessage };
+            sendMessageToRoom(io, room, newMessage);
           }
         }
-        socket.emit('new message', JSON.stringify(response));
+        if (response) {
+          socket.emit('new message', JSON.stringify(response));
+        }
       });
     });
     socket.on('disconnect', () => {
-      if (socketUserName && socketRoomName) {
+      if (socketRoomName && socketUserName) {
         Room.findOne({ roomName: socketRoomName }, (err, room) => {
           if (!err && room) {
-            const newMessage = {
+            const message = {
               msgId: generateToken(),
               msgType: messageTypes.USER_LEFT,
               msgTimestamp: Date.now(),
               msgAuthor: '',
               msgContent: `User ${socketUserName} left the room`
             };
-            room.messages.push(newMessage);
+            room.messages.push(message);
             room.save();
-            const response = { message: newMessage };
-            socket.emit('new message', JSON.stringify(response));
+            sendMessageToRoom(io, room, message);
           }
         });
       }
