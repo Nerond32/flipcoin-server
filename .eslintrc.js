@@ -13,7 +13,8 @@ module.exports = {
   },
   rules: {
     quotes: ['error', 'single'],
-    'no-unused-vars': 'warn',
+    'import/order': 0,
+    'no-unused-vars': 1,
     'prettier/prettier': ['error', { singleQuote: true, endOfLine: 'auto' }]
   }
 };

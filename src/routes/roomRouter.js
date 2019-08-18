@@ -15,9 +15,12 @@ const routes = Room => {
       });
     })
     .post((req, res) => {
-      const { userName, roomName } = req.body;
+      const { roomName, userName, userToken } = req.body;
+      if (Room.findOne({ roomName }, (err, room) => room).length) {
+        res.sendStatus(409);
+      }
       const newRoom = new Room();
-      const hostToken = generateToken();
+      const hostToken = userToken || generateToken();
       const userId = generateToken();
       newRoom.host = {
         hostToken,
