@@ -41,9 +41,10 @@ const routes = Room => {
         msgAuthor: '',
         msgContent: `Room ${roomName} has been created by ${userName}`
       });
-      newRoom.save();
       const response = { userToken: hostToken };
-      return res.status(201).json(response);
+      newRoom.save(() => {
+        return res.status(201).json(response);
+      });
     });
   return roomRouter;
 };

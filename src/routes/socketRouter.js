@@ -2,7 +2,7 @@ const generateToken = require('../utils/generateToken');
 const messageTypes = require('../constants/messageTypes');
 
 const handleRoomFinding = (err, room, roomName) => {
-  let response = '';
+  let response = null;
   if (err) {
     response = {
       error: `Failed to get room. Reason: ${err}`,
@@ -18,7 +18,7 @@ const handleRoomFinding = (err, room, roomName) => {
 };
 
 const handleNotEnoughInfo = (userToken, userName) => {
-  let response = '';
+  let response = null;
   if (!userToken && !userName) {
     response = {
       error: 'Cannot join room without username or remembered user token!',
@@ -29,7 +29,7 @@ const handleNotEnoughInfo = (userToken, userName) => {
 };
 
 const handleUserConflicts = (room, userToken, userName) => {
-  let response = '';
+  let response = null;
   let userWithToken;
   let userWithName;
   if (userToken) {
@@ -124,19 +124,10 @@ const socketRouter = (io, Room) => {
     });
     socket.on('send message', msg => {
       const { roomName, userToken, message } = JSON.parse(msg);
-      console.log(userToken);
       let response;
       Room.findOne({ roomName }, (err, room) => {
-        console.log(room.users);
-        if (err) {
-          response = {
-            error: `Failed to get room. Reason: ${err}`
-          };
-        } else if (!room) {
-          response = {
-            error: `Room ${roomName} does not exist`
-          };
-        } else {
+        response = handleRoomFinding(err, room, roomName);
+        if (!response) {
           const userWithToken = room.users.find(user => {
             return user.userToken === userToken;
           });
