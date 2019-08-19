@@ -19,7 +19,8 @@ const roomModel = new Schema({
       userId: String,
       userToken: String,
       userName: String,
-      userConfirmed: Boolean
+      userIsConfirmed: Boolean,
+      userIsOnline: Boolean
     }
   ]
 });

@@ -32,7 +32,8 @@ const routes = Room => {
         userSessionId: '',
         userId,
         userName,
-        userConfirmed: false
+        userIsConfirmed: false,
+        userIsOnline: false
       });
       newRoom.messages.push({
         msgId: generateToken(),
