@@ -52,4 +52,20 @@ const userLeft = (io, room, userId, userName) => {
   io.to(room.roomName).emit('user left', JSON.stringify(messageToClient));
 };
 
-module.exports = { sendMessage, userJoined, userLeft };
+const userChangedConfirmStatus = (io, room, userId, userIsConfirmed) => {
+  const messageToClient = {
+    userId,
+    userIsConfirmed
+  };
+  io.to(room.roomName).emit(
+    'user changed confirm status',
+    JSON.stringify(messageToClient)
+  );
+};
+
+module.exports = {
+  sendMessage,
+  userJoined,
+  userLeft,
+  userChangedConfirmStatus
+};

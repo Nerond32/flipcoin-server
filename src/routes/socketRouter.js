@@ -79,6 +79,32 @@ const socketRouter = (io, Room) => {
         }
       });
     });
+    socket.on('change confirm status', msg => {
+      const { roomName, userToken, userIsConfirmed } = JSON.parse(msg);
+      let response;
+      Room.findOne({ roomName }, (err, room) => {
+        response = socketErrorHandling.handleRoomFinding(err, room, roomName);
+        if (!response) {
+          const userWithToken = room.users.find(user => {
+            return user.userToken === userToken;
+          });
+          if (!userWithToken) {
+            response = {
+              error: 'User with this token is not present in this room!'
+            };
+          } else {
+            userWithToken.userIsConfirmed = userIsConfirmed;
+            room.save();
+            roomHandlers.userChangedConfirmStatus(
+              io,
+              room,
+              userWithToken.userId,
+              userIsConfirmed
+            );
+          }
+        }
+      });
+    });
     socket.on('disconnect', () => {
       const { roomName, userId, userName } = socketData;
       if (roomName && userId) {
