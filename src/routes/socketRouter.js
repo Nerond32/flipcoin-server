@@ -57,7 +57,9 @@ const socketRouter = (io, Room) => {
           };
         }
         socket.emit('send room', JSON.stringify(response));
-        socket.join(room.roomName);
+        if (room) {
+          socket.join(room.roomName);
+        }
       });
     });
     socket.on('send message', msg => {
