@@ -1,4 +1,5 @@
 const express = require('express');
+const roomValidator = require('./validators/roomValidator');
 const generateToken = require('../utils/generateToken');
 const messageTypes = require('../constants/messageTypes');
 
@@ -16,9 +17,20 @@ const routes = Room => {
     })
     .post((req, res) => {
       const { roomName, userName, userToken } = req.body;
-      if (Room.findOne({ roomName }, (err, room) => room).length) {
-        res.sendStatus(409);
+      const result = roomValidator.createRoom.validate({
+        roomName,
+        userName,
+        userToken
+      });
+      if (result.error) {
+        return res.sendStatus(400);
       }
+      Room.findOne({ roomName }, (err, room) => {
+        if (room) {
+          return res.sendStatus(409);
+        }
+        return null;
+      });
       const newRoom = new Room();
       const hostToken = userToken || generateToken();
       const userId = generateToken();
@@ -46,6 +58,7 @@ const routes = Room => {
       newRoom.save(() => {
         return res.status(201).json(response);
       });
+      return null;
     });
   return roomRouter;
 };

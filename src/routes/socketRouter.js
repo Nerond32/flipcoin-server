@@ -25,6 +25,7 @@ const socketRouter = (io, Room) => {
               userIsConfirmed: false,
               userIsOnline: true
             };
+            console.log(room.users);
             room.users.push(userWithToken);
           } else {
             userWithToken.userIsOnline = true;
@@ -57,12 +58,13 @@ const socketRouter = (io, Room) => {
           };
         }
         socket.emit('send room', JSON.stringify(response));
-        if (room) {
+        if (!response.error) {
           socket.join(room.roomName);
         }
       });
     });
     socket.on('send message', msg => {
+      console.log(msg);
       const { roomName, userToken, message } = JSON.parse(msg);
       let response;
       Room.findOne({ roomName }, (err, room) => {
