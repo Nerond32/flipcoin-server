@@ -1,6 +1,7 @@
 const app = require('express')();
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const { errors } = require('celebrate');
 
 const allowedOrigins = ['http://localhost:3000'];
 
@@ -23,5 +24,6 @@ const Room = require('../models/roomModel');
 const roomRouter = require('../routes/roomRouter')(Room);
 
 app.use('/api', roomRouter);
+app.use(errors());
 
 module.exports = app;
