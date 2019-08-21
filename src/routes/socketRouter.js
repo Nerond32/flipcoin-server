@@ -1,128 +1,103 @@
-const generateToken = require('../utils/generateToken');
-const socketErrorHandling = require('./socketErrorHandling');
-const roomHandlers = require('./roomHandlers');
+const roomValidators = require('./validators/roomValidators');
+const roomSocketService = require('../services/roomSocketServices');
 
-const socketRouter = (io, Room) => {
+const socketRouter = io => {
   io.on('connection', socket => {
     let socketData = {};
-    socket.on('request room', msg => {
+    socket.on('get room', async msg => {
       const { roomName, userToken, userName } = JSON.parse(msg);
-      Room.findOne({ roomName }, (err, room) => {
-        let response =
-          socketErrorHandling.handleRoomFinding(err, room, roomName) ||
-          socketErrorHandling.handleNotEnoughInfo(userToken, userName) ||
-          socketErrorHandling.handleUserConflicts(room, userToken, userName);
-        if (!response) {
-          const returnedToken = userToken || generateToken();
-          let userWithToken = room.users.find(user => {
-            return user.userToken === userToken;
-          });
-          if (!userWithToken) {
-            userWithToken = {
-              userId: generateToken(),
-              userToken: returnedToken,
-              userName,
-              userIsConfirmed: false,
-              userIsOnline: true
-            };
-            console.log(room.users);
-            room.users.push(userWithToken);
-          } else {
-            userWithToken.userIsOnline = true;
-          }
-          const usersData = room.users
-            .filter(user => user.userIsOnline)
-            .map(user => {
-              return {
-                userId: user.userId,
-                userName: user.userName,
-                userIsConfirmed: user.userIsConfirmed
-              };
-            });
-          roomHandlers.userJoined(io, room, userWithToken);
+      const validationResult = roomValidators.socketGetRoom.validate({
+        roomName,
+        userToken,
+        userName
+      });
+      let response;
+      if (validationResult.error) {
+        response = {
+          error: validationResult.error.details[0].message,
+          status: 400
+        };
+      } else {
+        const result = await roomSocketService.getRoom(
+          roomName,
+          userToken,
+          userName
+        );
+        ({ response } = result);
+        if (!response.error) {
           socketData = {
-            roomName: room.roomName,
-            userId: userWithToken.userId,
+            roomName,
+            userId: response.userToken,
             userName
           };
-          const responseRoom = {
-            hostId: room.host.hostId,
-            roomName: room.roomName,
-            messages: room.messages,
-            users: usersData
-          };
-          response = {
-            room: responseRoom,
-            userToken: returnedToken,
-            userName
-          };
+          io.to(roomName).emit(
+            'user joined',
+            JSON.stringify(response.messageToClient)
+          );
         }
         socket.emit('send room', JSON.stringify(response));
-        if (!response.error) {
-          socket.join(room.roomName);
-        }
-      });
-    });
-    socket.on('send message', msg => {
-      console.log(msg);
-      const { roomName, userToken, message } = JSON.parse(msg);
-      let response;
-      Room.findOne({ roomName }, (err, room) => {
-        response = socketErrorHandling.handleRoomFinding(err, room, roomName);
-        if (!response) {
-          const userWithToken = room.users.find(user => {
-            return user.userToken === userToken;
-          });
-          if (!userWithToken) {
-            response = {
-              error: 'User with this token is not present in this room!'
-            };
-          } else {
-            roomHandlers.sendMessage(io, room, message, userWithToken.userName);
-          }
-        }
-      });
-    });
-    socket.on('change confirm status', msg => {
-      const { roomName, userToken, userIsConfirmed } = JSON.parse(msg);
-      let response;
-      Room.findOne({ roomName }, (err, room) => {
-        response = socketErrorHandling.handleRoomFinding(err, room, roomName);
-        if (!response) {
-          const userWithToken = room.users.find(user => {
-            return user.userToken === userToken;
-          });
-          if (!userWithToken) {
-            response = {
-              error: 'User with this token is not present in this room!'
-            };
-          } else {
-            userWithToken.userIsConfirmed = userIsConfirmed;
-            room.save();
-            roomHandlers.userChangedConfirmStatus(
-              io,
-              room,
-              userWithToken.userId,
-              userIsConfirmed
-            );
-          }
-        }
-      });
-    });
-    socket.on('disconnect', () => {
-      const { roomName, userId, userName } = socketData;
-      if (roomName && userId) {
-        Room.findOne({ roomName: socketData.roomName }, (err, room) => {
-          if (!err && room) {
-            const userWithId = room.users.find(user => {
-              return user.userId === userId;
-            });
-            userWithId.userIsOnline = false;
-            roomHandlers.userLeft(io, room, userId, userName);
-          }
-        });
       }
     });
+    // socket.on('send message', msg => {
+    //   console.log(msg);
+    //   const { roomName, userToken, message } = JSON.parse(msg);
+    //   let response;
+    //   Room.findOne({ roomName }, (err, room) => {
+    //     response = socketErrorHandling.handleRoomFinding(err, room, roomName);
+    //     if (!response) {
+    //       const userWithToken = room.users.find(user => {
+    //         return user.userToken === userToken;
+    //       });
+    //       if (!userWithToken) {
+    //         response = {
+    //           error: 'User with this token is not present in this room!'
+    //         };
+    //       } else {
+    //         roomHandlers.sendMessage(io, room, message, userWithToken.userName);
+    //       }
+    //     }
+    //   });
+    // });
+    // socket.on('change confirm status', msg => {
+    //   const { roomName, userToken, userIsConfirmed } = JSON.parse(msg);
+    //   let response;
+    //   Room.findOne({ roomName }, (err, room) => {
+    //     response = socketErrorHandling.handleRoomFinding(err, room, roomName);
+    //     if (!response) {
+    //       const userWithToken = room.users.find(user => {
+    //         return user.userToken === userToken;
+    //       });
+    //       if (!userWithToken) {
+    //         response = {
+    //           error: 'User with this token is not present in this room!'
+    //         };
+    //       } else {
+    //         userWithToken.userIsConfirmed = userIsConfirmed;
+    //         room.save();
+    //         roomHandlers.userChangedConfirmStatus(
+    //           io,
+    //           room,
+    //           userWithToken.userId,
+    //           userIsConfirmed
+    //         );
+    //       }
+    //     }
+    //   });
+    // });
+    // socket.on('disconnect', () => {
+    //   const { roomName, userId, userName } = socketData;
+    //   if (roomName && userId) {
+    //     Room.findOne({ roomName: socketData.roomName }, (err, room) => {
+    //       if (!err && room) {
+    //         const userWithId = room.users.find(user => {
+    //           return user.userId === userId;
+    //         });
+    //         userWithId.userIsOnline = false;
+    //         roomHandlers.userLeft(io, room, userId, userName);
+    //       }
+    //     });
+    //   }
+    // });
   });
 };
 

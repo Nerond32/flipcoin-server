@@ -1,7 +1,7 @@
 const express = require('express');
 const { celebrate } = require('celebrate');
 const roomValidators = require('./validators/roomValidators');
-const roomService = require('../services/roomApiService');
+const roomService = require('../services/roomApiServices');
 
 const routes = Room => {
   const roomRouter = express.Router();

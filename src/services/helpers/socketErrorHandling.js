@@ -1,25 +1,9 @@
-const handleRoomFinding = (err, room, roomName) => {
+const handleRoomNotExists = (room, roomName) => {
   let response = null;
-  if (err) {
-    response = {
-      error: `Failed to get room. Reason: ${err}`,
-      status: 404
-    };
-  } else if (!room) {
+  if (!room) {
     response = {
       error: `Room ${roomName} does not exist`,
       status: 404
-    };
-  }
-  return response;
-};
-
-const handleNotEnoughInfo = (userToken, userName) => {
-  let response = null;
-  if (!userToken && !userName) {
-    response = {
-      error: 'Cannot join room without username or remembered user token!',
-      status: 400
     };
   }
   return response;
@@ -58,7 +42,6 @@ const handleUserConflicts = (room, userToken, userName) => {
 };
 
 module.exports = {
-  handleRoomFinding,
-  handleNotEnoughInfo,
+  handleRoomNotExists,
   handleUserConflicts
 };
