@@ -66,4 +66,66 @@ const getRoom = async (roomName, userToken, userName) => {
   return result;
 };
 
-module.exports = { getRoom };
+const sendMessage = async (roomName, userToken, message) => {
+  const room = await Room.findOne({ roomName });
+  let result = socketErrorHandling.handleRoomNotExists(room, roomName);
+  if (!result) {
+    const userWithToken = room.users.find(user => {
+      return user.userToken === userToken;
+    });
+    if (!userWithToken) {
+      result = {
+        error: 'User with this token is not present in this room!',
+        status: 400
+      };
+    } else {
+      const newMessage = {
+        msgId: generateToken(),
+        msgType: messageTypes.MESSAGE,
+        msgTimestamp: Date.now(),
+        msgAuthor: userWithToken.userName,
+        msgContent: message
+      };
+      room.messages.push(newMessage);
+      await room.save();
+      result = {
+        messageToRoom: {
+          message: newMessage
+        }
+      };
+    }
+  }
+  return result;
+};
+
+const userLeft = async (roomName, userId) => {
+  const room = await Room.findOne({ roomName });
+  let result = socketErrorHandling.handleRoomNotExists(room, roomName);
+  if (!result) {
+    const userWithId = room.users.find(user => {
+      return user.userId === userId;
+    });
+    userWithId.userIsOnline = false;
+    const newMessage = {
+      msgId: generateToken(),
+      msgType: messageTypes.USER_LEFT,
+      msgTimestamp: Date.now(),
+      msgAuthor: '',
+      msgContent: `User ${userWithId.userName} left the room`
+    };
+    room.messages.push(newMessage);
+    await room.save();
+    result = {
+      messageToRoom: {
+        message: newMessage,
+        user: {
+          userId: userWithId.userId,
+          userName: userWithId.userName
+        }
+      }
+    };
+  }
+  return result;
+};
+
+module.exports = { getRoom, sendMessage, userLeft };
