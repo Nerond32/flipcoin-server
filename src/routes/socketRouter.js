@@ -67,32 +67,38 @@ const socketRouter = io => {
         );
       }
     });
-    // socket.on('change confirm status', msg => {
-    //   const { roomName, userToken, userIsConfirmed } = JSON.parse(msg);
-    //   let response;
-    //   Room.findOne({ roomName }, (err, room) => {
-    //     response = socketErrorHandling.handleRoomFinding(err, room, roomName);
-    //     if (!response) {
-    //       const userWithToken = room.users.find(user => {
-    //         return user.userToken === userToken;
-    //       });
-    //       if (!userWithToken) {
-    //         response = {
-    //           error: 'User with this token is not present in this room!'
-    //         };
-    //       } else {
-    //         userWithToken.userIsConfirmed = userIsConfirmed;
-    //         room.save();
-    //         roomHandlers.userChangedConfirmStatus(
-    //           io,
-    //           room,
-    //           userWithToken.userId,
-    //           userIsConfirmed
-    //         );
-    //       }
-    //     }
-    //   });
-    // });
+    socket.on('change confirm status', async msg => {
+      const { roomName, userToken, userIsConfirmed } = JSON.parse(msg);
+      const validationResult = roomValidators.socketChangeConfirmStatus.validate(
+        {
+          roomName,
+          userToken,
+          userIsConfirmed
+        }
+      );
+      let result;
+      if (validationResult.error) {
+        result = {
+          error: validationResult.error.details[0].message,
+          status: 400
+        };
+      } else {
+        result = await roomSocketService.userChangeConfirmStatus(
+          roomName,
+          userToken,
+          userIsConfirmed
+        );
+      }
+      if (result.response) {
+        socket.emit('error msg', JSON.stringify(result.response));
+      }
+      if (result.messageToRoom) {
+        io.to(roomName).emit(
+          'user changed confirm status',
+          JSON.stringify(result.messageToRoom)
+        );
+      }
+    });
     socket.on('disconnect', async () => {
       const { roomName, userId } = socketData;
       if (roomName && userId) {

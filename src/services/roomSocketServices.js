@@ -76,7 +76,7 @@ const sendMessage = async (roomName, userToken, message) => {
     if (!userWithToken) {
       result = {
         error: 'User with this token is not present in this room!',
-        status: 400
+        status: 404
       };
     } else {
       const newMessage = {
@@ -128,4 +128,36 @@ const userLeft = async (roomName, userId) => {
   return result;
 };
 
-module.exports = { getRoom, sendMessage, userLeft };
+const userChangeConfirmStatus = async (
+  roomName,
+  userToken,
+  userIsConfirmed
+) => {
+  const room = await Room.findOne({ roomName });
+  let result = socketErrorHandling.handleRoomNotExists(room, roomName);
+  if (!result) {
+    const userWithToken = room.users.find(user => {
+      return user.userToken === userToken;
+    });
+    if (!userWithToken) {
+      result = {
+        error: 'User with this id is not present in this room!',
+        status: 404
+      };
+    } else {
+      userWithToken.userIsConfirmed = userIsConfirmed;
+      await room.save();
+      result = {
+        messageToRoom: {
+          user: {
+            userId: userWithToken.userId,
+            userIsConfirmed
+          }
+        }
+      };
+    }
+  }
+  return result;
+};
+
+module.exports = { getRoom, sendMessage, userLeft, userChangeConfirmStatus };

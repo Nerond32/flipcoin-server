@@ -55,8 +55,25 @@ const socketSendMessage = Joi.object().keys({
     .required()
 });
 
+const socketChangeConfirmStatus = Joi.object().keys({
+  roomName: Joi.string()
+    .alphanum()
+    .min(3)
+    .max(24)
+    .required(),
+  userToken: Joi.string()
+    .alphanum()
+    .min(32)
+    .max(32)
+    .required(),
+  userIsConfirmed: Joi.boolean()
+    .strict()
+    .required()
+});
+
 module.exports = {
   createRoom,
   socketGetRoom,
-  socketSendMessage
+  socketSendMessage,
+  socketChangeConfirmStatus
 };

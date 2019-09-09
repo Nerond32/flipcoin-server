@@ -6,6 +6,11 @@ const Room = require('./models/roomModel');
 require('./routes/socketRouter')(io, Room);
 
 mongoose.connect('mongodb://localhost/roomAPI', { useNewUrlParser: true });
+const crypto = require('crypto');
+
+const generateToken = () => {
+  return crypto.randomBytes(16).toString('hex');
+};
 
 const port = process.env.PORT || 7777;
 server.listen(port, () => {
